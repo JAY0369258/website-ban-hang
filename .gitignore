@@ -1,0 +1,23 @@
+Thư mục và tệp tạm
+/Uploads/*
+!.gitkeep
+
+Tệp cấu hình nhạy cảm
+db_connect.php
+
+Tệp môi trường
+.env
+
+Thư mục cache và log
+.log
+/cache/
+/tmp/*
+/vendor/
+
+Tệp IDE
+.idea/
+.vscode/
+
+Tệp hệ thống
+.DS_Store
+Thumbs.db
