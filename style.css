@@ -1,9 +1,35 @@
-body {
-  font-family: Arial, sans-serif;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.navbar {
+  @apply bg-blue-600 text-white p-4;
 }
-.container {
-  max-width: 1200px;
+
+.navbar-container {
+  @apply container mx-auto flex justify-between items-center;
 }
-.relative:hover .hidden {
-  display: block;
+
+.navbar-menu {
+  @apply flex space-x-4;
+}
+
+.navbar-menu a {
+  @apply px-4;
+}
+
+@media (max-width: 768px) {
+  .navbar-menu {
+    @apply hidden;
+  }
+  .navbar-menu.active {
+    @apply block absolute top-16 left-0 w-full bg-blue-600 flex flex-col space-y-4 p-4;
+  }
+  .hamburger {
+    @apply block cursor-pointer;
+  }
+}
+
+.hamburger span {
+  @apply block w-6 h-1 bg-white mb-1;
 }

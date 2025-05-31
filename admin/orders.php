@@ -1,6 +1,8 @@
 <?php
 session_start();
 require_once '../db_connect.php';
+require '../vendor/autoload.php';
+use PHPMailer\PHPMailer\PHPMailer;
 
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     header('Location: ../login.php');
@@ -53,16 +55,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
     $order_id = (int)$_POST['order_id'];
     $status = strip_tags(filter_input(INPUT_POST, 'status', FILTER_UNSAFE_RAW));
     if (in_array($status, ['pending', 'processing', 'completed', 'cancelled'])) {
-        $stmt = $pdo->prepare("UPDATE orders SET status = ? WHERE id = ?");
-        $stmt->execute([$status, $order_id]);
-        header('Location: orders.php' . (!empty($_GET) ? '?' . http_build_query($_GET) : ''));
-        exit;
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare("UPDATE orders SET status = ? WHERE id = ?");
+            $stmt->execute([$status, $order_id]);
+
+            // Send email notification
+            $stmt = $pdo->prepare("SELECT o.email, o.name FROM orders o WHERE o.id = ?");
+            $stmt->execute([$order_id]);
+            $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            $mail = new PHPMailer(true);
+            $mail->isSMTP();
+            $mail->Host = 'smtp.gmail.com';
+            $mail->SMTPAuth = true;
+            $mail->Username = 'tuan0369258@gmail.com';
+            $mail->Password = 'pobv wkku pbxv cbpw';
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port = 587;
+            $mail->setFrom('your_email@gmail.com', 'Cửa Hàng Online');
+            $mail->addAddress($order['email']);
+            $mail->isHTML(true);
+            $mail->Subject = 'Cập nhật trạng thái đơn hàng #' . $order_id;
+
+            $template = file_get_contents('../email_template.html');
+            $status_vn = ['pending' => 'Đang chờ', 'processing' => 'Đang xử lý', 'completed' => 'Hoàn thành', 'cancelled' => 'Hủy'];
+            $content = "<p>Kính gửi {$order['name']},</p><p>Trạng thái đơn hàng #$order_id đã được cập nhật thành: <strong>{$status_vn[$status]}</strong>.</p>";
+            $mail->Body = str_replace(['{{title}}', '{{content}}'], ['Cập nhật trạng thái đơn hàng', $content], $template);
+            $mail->send();
+
+            $pdo->commit();
+            header('Location: orders.php' . (!empty($_GET) ? '?' . http_build_query($_GET) : ''));
+            exit;
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            error_log("Update status failed: {$e->getMessage()}");
+        }
     }
 }
 ?>
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -70,7 +103,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="../style.css">
 </head>
-
 <body class="bg-gray-100">
     <nav class="bg-blue-600 text-white p-4">
         <div class="container mx-auto flex justify-between items-center">
@@ -79,6 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
                 <a href="index.php" class="px-4">Trang Chủ</a>
                 <a href="products.php" class="px-4">Quản Lý Sản Phẩm</a>
                 <a href="categories.php" class="px-4">Quản Lý Danh Mục</a>
+                <a href="reports.php" class="px-4">Báo Cáo</a>
                 <a href="../logout.php" class="px-4">Đăng Xuất</a>
             </div>
         </div>
@@ -159,5 +192,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
         <?php endif; ?>
     </div>
 </body>
-
 </html>
